@@ -5,6 +5,7 @@ package hardloop
 // Copyright (C) 2012 Rob Figueiredo
 // All Rights Reserved.
 // MIT LICENSE
+// See THIRD_PARTY_NOTICES.md for the full license.
 
 import (
 	"errors"

@@ -118,3 +118,7 @@ Test code
 make test
 # make coverage html-wsl
 ```
+
+## License
+
+Licensed under [MIT](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for adapted code.
