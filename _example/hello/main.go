@@ -3,18 +3,16 @@ package main
 import (
 	"context"
 	"log"
-	"sync"
+	"log/slog"
+	"os"
+	"os/signal"
 	"time"
 
-	"github.com/worldline-go/hardloop"
+	"github.com/rakunlabs/hardloop"
 )
 
-func MyFunction(ctx context.Context, wg *sync.WaitGroup) error {
-	// wg is used to wait for the function to finish.
-	// if you open a new goroutine, you must add 1 to wg.Add()
-	// it is help to finish the function before the start again.
-
-	// do something
+func MyFunction(ctx context.Context) error {
+	// ctx is canceled when the stop time comes.
 	log.Println("Hello hardloop!")
 	log.Println("Waiting 12 secs...")
 
@@ -25,30 +23,10 @@ func MyFunction(ctx context.Context, wg *sync.WaitGroup) error {
 		log.Println("Done!")
 	case <-ctx.Done():
 		log.Println("Canceled!")
-		// stop timer
 		timer.Stop()
-		select {
-		case <-timer.C:
-		default:
-		}
 	}
 
 	return nil
-}
-
-type myLog struct{}
-
-func (myLog) Error(msg string, keysAndValues ...interface{}) {
-	log.Println(msg, keysAndValues)
-}
-func (myLog) Info(msg string, keysAndValues ...interface{}) {
-	log.Println(msg, keysAndValues)
-}
-func (myLog) Debug(msg string, keysAndValues ...interface{}) {
-	log.Println(msg, keysAndValues)
-}
-func (myLog) Warn(msg string, keysAndValues ...interface{}) {
-	log.Println(msg, keysAndValues)
 }
 
 func main() {
@@ -74,8 +52,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	myFunctionLoop.SetLogger(myLog{})
+	myFunctionLoop.SetLogger(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 
-	// run forever in goroutine (or until the function returns ErrLoopExited)
-	myFunctionLoop.RunWait(context.Background())
+	// stop with Ctrl+C
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// blocks until ctx is done or the function returns hardloop.ErrCloseLoop
+	if err := myFunctionLoop.Run(ctx); err != nil {
+		log.Println(err)
+	}
 }

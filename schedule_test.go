@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/worldline-go/hardloop"
+	"github.com/rakunlabs/hardloop"
 )
 
 func TestLoop_NextStartTime(t *testing.T) {

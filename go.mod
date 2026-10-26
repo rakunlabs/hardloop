@@ -1,5 +1,3 @@
-module github.com/worldline-go/hardloop
+module github.com/rakunlabs/hardloop
 
-go 1.24
-
-require github.com/robfig/cron/v3 v3.0.1
+go 1.25

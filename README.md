@@ -1,17 +1,19 @@
 # hardloop
 
-[![License](https://img.shields.io/github/license/worldline-go/hardloop?color=red&style=flat-square)](https://raw.githubusercontent.com/worldline-go/hardloop/main/LICENSE)
-[![Coverage](https://img.shields.io/sonar/coverage/worldline-go_hardloop?logo=sonarcloud&server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/summary/overall?id=worldline-go_hardloop)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/worldline-go/hardloop/test.yml?branch=main&logo=github&style=flat-square&label=ci)](https://github.com/worldline-go/hardloop/actions)
-[![Go Report Card](https://goreportcard.com/badge/github.com/worldline-go/hardloop?style=flat-square)](https://goreportcard.com/report/github.com/worldline-go/hardloop)
-[![Go PKG](https://raw.githubusercontent.com/worldline-go/guide/main/badge/custom/reference.svg)](https://pkg.go.dev/github.com/worldline-go/hardloop)
+[![License](https://img.shields.io/github/license/rakunlabs/hardloop?color=red&style=flat-square)](https://raw.githubusercontent.com/rakunlabs/hardloop/main/LICENSE)
+[![Coverage](https://img.shields.io/sonar/coverage/rakunlabs_hardloop?logo=sonarcloud&server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/summary/overall?id=rakunlabs_hardloop)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rakunlabs/hardloop/test.yml?branch=main&logo=github&style=flat-square&label=ci)](https://github.com/rakunlabs/hardloop/actions)
+[![Go PKG](https://raw.githubusercontent.com/rakunlabs/.github/main/assets/badges/gopkg.svg)](https://pkg.go.dev/github.com/rakunlabs/hardloop)
 
 Hardloop is a cron time-based function runner.
 
 Set start and end times as cron specs, and give function to run between them.
 
+Go 1.25 or later is required. Running windows include their start time and exclude
+their stop time. The function must respect context cancellation to stop on time.
+
 ```shell
-go get github.com/worldline-go/hardloop
+go get github.com/rakunlabs/hardloop
 ```
 
 ![hardloop](./_assets/hardloop.svg)
@@ -26,12 +28,18 @@ You can give as much as you want start, stop times.
 If stop time is not given, it will run forever.  
 If just stop time given, it will restart in the stop times.
 
-Use Timezone to set the timezone: `CRON_TZ=Europe/Istanbul 0 7 * * 1,2,3,4,5` 
+If the function returns before the stop time, it is started again, at most once per second. Change it with `SetRestartDelay`.
+
+Use Timezone to set the timezone: `CRON_TZ=Europe/Istanbul 0 7 * * 1,2,3,4,5`
 
 Default timezone is system timezone.
 
-> Some times doens't exist in some timezones.
-> For example, `CRON_TZ=Europe/Amsterdam 30 2 26 3 *` doesn't exist due to in that time 02:00 -> 03:00 DST 1 hour adding. It will be make some problems so don't use non-exist times.
+Day of week accepts `0-7` (both `0` and `7` are Sunday) and names like `mon-fri`.
+
+> Some times don't exist in some timezones.
+> For example, `CRON_TZ=Europe/Amsterdam 30 2 * * *` doesn't exist on the DST start day, clocks jump from 02:00 to 03:00 so that day is skipped. Avoid using times that don't exist.
+>
+> When clocks are turned back (DST end), repeated times run only once like standard cron. Schedules without a fixed hour like `*/30 * * * *` still run in both occurrences.
 
 ```go
 // Set start cron specs.
@@ -56,8 +64,12 @@ if err != nil {
     log.Fatal(err)
 }
 
-// run forever in goroutine (or until the function returns ErrLoopExited)
-myFunctionLoop.RunWait(ctx)
+// blocks until ctx is done or the function returns hardloop.ErrCloseLoop
+// returns nil on ErrCloseLoop, otherwise the context error
+err = myFunctionLoop.Run(ctx)
+
+// or run in background
+// go myFunctionLoop.Run(ctx)
 ```
 
 For simple jobs, you can use `hardloop.NewCron` to create a cron job.
@@ -72,15 +84,30 @@ myCronJob, err := hardloop.NewCron(hardloop.Cron{
 // ... handle error
 
 myCronJob.Start(ctx) // background run the cron job
-// myCronJob.Stop() // to stop the cron job
+
+// Stop cancels the jobs without waiting, safe to call inside a job.
+// Wait the returned context to be sure running jobs are finished.
+<-myCronJob.Stop().Done()
 ```
+
+### Restart Delay
+
+When the function returns inside a running window, it is started again. To prevent a busy loop, there is a minimum duration between two starts, default is `hardloop.DefaultRestartDelay` (1 second).
+
+```go
+// start again at most once in 10 seconds
+myFunctionLoop.SetRestartDelay(10 * time.Second)
+```
+
+This minimum also applies to scheduled starts. If waiting for the delay would
+outlast a running window, the loop waits for the next window instead.
 
 ### Set Logger
 
-Implement Logger interface and set to the loop.
+Loop and cron job use `*slog.Logger`, default is `slog.Default()`. Set `nil` to disable logging.
 
 ```go
-myFunctionLoop.SetLogger(myLog{})
+myFunctionLoop.SetLogger(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 ```
 
 ## Development

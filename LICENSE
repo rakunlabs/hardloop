@@ -1,6 +1,10 @@
 MIT License
 
-Copyright (c) 2022 worldline-go
+Copyright (c) 2022 rakunlabs
+
+Portions adapted from robfig/cron:
+Copyright (C) 2012 Rob Figueiredo
+All Rights Reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -2,6 +2,7 @@ package hardloop
 
 import "time"
 
+// FindPrev returns the latest previous time of the schedules, zero if none.
 func FindPrev(schedules []Schedule, now time.Time) time.Time {
 	prevTime := time.Time{}
 
@@ -25,6 +26,7 @@ func FindPrev(schedules []Schedule, now time.Time) time.Time {
 	return prevTime
 }
 
+// FindNext returns the earliest next time of the schedules, zero if none.
 func FindNext(schedules []Schedule, now time.Time) time.Time {
 	nextTime := time.Time{}
 	for _, schedule := range schedules {

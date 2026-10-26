@@ -279,7 +279,7 @@ func Test_ParseSchedule(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("parse_%d", i), func(t *testing.T) {
-			schedule, err := ParseStandard(tt.schedule)
+			schedule, err := Parse(tt.schedule)
 			if err != nil {
 				t.Fatalf("failed to parse schedule: %v", err)
 			}
